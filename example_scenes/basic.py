@@ -14,7 +14,7 @@ from manim import *
 # Use -r <number> to specify a resolution (for example, -r 1920,1080
 # for a 1920x1080 video)
 
-
+        
 class OpeningManim(Scene):
     def construct(self):
         title = Tex(r"This is some \LaTeX")

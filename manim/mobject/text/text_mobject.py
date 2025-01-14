@@ -114,7 +114,11 @@ def remove_invisible_chars(mobject: SVGMobject) -> SVGMobject:
         return code
     return mobject_without_dots
 
-
+class LineVGroup(VGroup):
+    def __init__(self, *submobjects, text=""):
+        super().__init__(*submobjects)
+        self.text = text 
+        
 class Paragraph(VGroup):
     r"""Display a paragraph of text.
 
@@ -155,7 +159,7 @@ class Paragraph(VGroup):
 
     def __init__(
         self,
-        *text: Sequence[str],
+        *text,
         line_spacing: float = -1,
         alignment: str | None = None,
         **kwargs,
@@ -165,85 +169,76 @@ class Paragraph(VGroup):
         self.consider_spaces_as_chars = kwargs.get("disable_ligatures", False)
         super().__init__()
 
+        # (A) 여러줄을 합쳐서 하나의 Text(...) 생성
         lines_str = "\n".join(list(text))
         self.lines_text = Text(lines_str, line_spacing=line_spacing, **kwargs)
         lines_str_list = lines_str.split("\n")
+
+        # (B) 라인별 VGroup 만들기
         self.chars = self._gen_chars(lines_str_list)
 
+        # (C) self.lines 구조 설정
         self.lines = [list(self.chars), [self.alignment] * len(self.chars)]
         self.lines_initial_positions = [line.get_center() for line in self.lines[0]]
+
+        # (D) 실제로 씬에 추가
         self.add(*self.lines[0])
         self.move_to(np.array([0, 0, 0]))
         if self.alignment:
             self._set_all_lines_alignments(self.alignment)
 
-    def _gen_chars(self, lines_str_list: list) -> VGroup:
-        """Function to convert a list of plain strings to a VGroup of VGroups of chars.
-
-        Parameters
-        ----------
-        lines_str_list
-            List of plain text strings.
-
-        Returns
-        -------
-        :class:`~.VGroup`
-            The generated 2d-VGroup of chars.
+    def _gen_chars(self, lines_str_list: list[str]) -> VGroup:
         """
+        - lines_str_list: 각 줄의 문자열 목록
+        - 반환: 라인들을 담은 VGroup (각 라인은 LineVGroup)
+        """
+        total_lines_group = VGroup()
         char_index_counter = 0
-        chars = self.get_group_class()()
-        for line_no in range(len(lines_str_list)):
-            line_str = lines_str_list[line_no]
-            # Count all the characters in line_str
-            # Spaces may or may not count as characters
-            if self.consider_spaces_as_chars:
-                char_count = len(line_str)
-            else:
-                char_count = 0
-                for char in line_str:
-                    if not char.isspace():
-                        char_count += 1
 
-            chars.add(self.get_group_class()())
-            chars[line_no].add(
-                *self.lines_text.chars[
-                    char_index_counter : char_index_counter + char_count
-                ]
-            )
+        for line_no, line_str in enumerate(lines_str_list):
+            # 1) "표시할 문자" 개수 계산
+            if self.consider_spaces_as_chars:
+                char_count = len(line_str)  # 공백 포함
+            else:
+                # 공백은 제외
+                char_count = sum(1 for c in line_str if not c.isspace())
+
+            # 2) line_chars: self.lines_text.chars 슬라이싱
+            line_chars = self.lines_text.chars[
+                char_index_counter : char_index_counter + char_count
+            ]
+
+            # 3) 공백 제거(원하는 로직에 맞춰 수정 가능)
+            if self.consider_spaces_as_chars:
+                line_text = line_str
+            else:
+                # 모든 공백(\s) 제거
+                line_text = re.sub(r"\s+", "", line_str)
+
+            # 4) LineVGroup 생성 -> .text 에 실제 줄 내용을 저장
+            line_vgroup = LineVGroup(*line_chars, text=line_text)
+
+            # 5) 인덱스 갱신
             char_index_counter += char_count
             if self.consider_spaces_as_chars:
-                # If spaces count as characters, count the extra \n character
-                # which separates Paragraph's lines to avoid issues
+                # 줄바꿈 문자(\n)도 1개로 세는 경우
                 char_index_counter += 1
-        return chars
 
-    def _set_all_lines_alignments(self, alignment: str) -> Paragraph:
-        """Function to set all line's alignment to a specific value.
+            total_lines_group.add(line_vgroup)
 
-        Parameters
-        ----------
-        alignment
-            Defines the alignment of paragraph. Possible values are "left", "right", "center".
-        """
+        return total_lines_group
+
+
+    def _set_all_lines_alignments(self, alignment: str) -> "Paragraph":
         for line_no in range(len(self.lines[0])):
             self._change_alignment_for_a_line(alignment, line_no)
         return self
 
-    def _set_line_alignment(self, alignment: str, line_no: int) -> Paragraph:
-        """Function to set one line's alignment to a specific value.
-
-        Parameters
-        ----------
-        alignment
-            Defines the alignment of paragraph. Possible values are "left", "right", "center".
-        line_no
-            Defines the line number for which we want to set given alignment.
-        """
+    def _set_line_alignment(self, alignment: str, line_no: int) -> "Paragraph":
         self._change_alignment_for_a_line(alignment, line_no)
         return self
 
-    def _set_all_lines_to_initial_positions(self) -> Paragraph:
-        """Set all lines to their initial positions."""
+    def _set_all_lines_to_initial_positions(self) -> "Paragraph":
         self.lines[1] = [None] * len(self.lines[0])
         for line_no in range(len(self.lines[0])):
             self[line_no].move_to(
@@ -251,28 +246,12 @@ class Paragraph(VGroup):
             )
         return self
 
-    def _set_line_to_initial_position(self, line_no: int) -> Paragraph:
-        """Function to set one line to initial positions.
-
-        Parameters
-        ----------
-        line_no
-            Defines the line number for which we want to set given alignment.
-        """
+    def _set_line_to_initial_position(self, line_no: int) -> "Paragraph":
         self.lines[1][line_no] = None
         self[line_no].move_to(self.get_center() + self.lines_initial_positions[line_no])
         return self
 
     def _change_alignment_for_a_line(self, alignment: str, line_no: int) -> None:
-        """Function to change one line's alignment to a specific value.
-
-        Parameters
-        ----------
-        alignment
-            Defines the alignment of paragraph. Possible values are "left", "right", "center".
-        line_no
-            Defines the line number for which we want to set given alignment.
-        """
         self.lines[1][line_no] = alignment
         if self.lines[1][line_no] == "center":
             self[line_no].move_to(

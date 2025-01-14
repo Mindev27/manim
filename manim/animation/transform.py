@@ -44,13 +44,13 @@ from ..constants import (
     OUT,
     RendererType,
 )
-from ..mobject.mobject import Group, Mobject
+from ..mobject.mobject import Group, Mobject, Code, Text
 from ..utils.paths import path_along_arc, path_along_circles
 from ..utils.rate_functions import smooth, squish_rate_func
+from .composition import AnimationGroup
 
 if TYPE_CHECKING:
     from ..scene.scene import Scene
-
 
 class Transform(Animation):
     """A Transform transforms a Mobject into a target Mobject.

@@ -21,7 +21,8 @@ from manim.constants import *
 from manim.mobject.geometry.arc import Dot
 from manim.mobject.geometry.polygram import RoundedRectangle
 from manim.mobject.geometry.shape_matchers import SurroundingRectangle
-from manim.mobject.text.text_mobject import Paragraph
+# from manim.mobject.text.text_mobject import Paragraph
+from my_module import CodeParagraph
 from manim.mobject.types.vectorized_mobject import VGroup
 from manim.utils.color import WHITE
 
@@ -332,7 +333,7 @@ class Code(VGroup):
         for line_no in range(0, self.code_json.__len__()):
             number = str(self.line_no_from + line_no)
             line_numbers_array.append(number)
-        line_numbers = Paragraph(
+        line_numbers = CodeParagraph(
             *list(line_numbers_array),
             line_spacing=self.line_spacing,
             alignment="right",
@@ -347,38 +348,37 @@ class Code(VGroup):
         return line_numbers
 
     def _gen_colored_lines(self):
-        """Function to generate code.
-
-        Returns
-        -------
-        :class:`~.Paragraph`
-            The generated code according to parameters.
-        """
         lines_text = []
-        for line_no in range(0, self.code_json.__len__()):
+        for line_no in range(len(self.code_json)):
             line_str = ""
-            for word_index in range(self.code_json[line_no].__len__()):
-                line_str = line_str + self.code_json[line_no][word_index][0]
-            lines_text.append(self.tab_spaces[line_no] * "\t" + line_str)
-        code = Paragraph(
-            *list(lines_text),
+            for word_index in range(len(self.code_json[line_no])):
+                line_str += self.code_json[line_no][word_index][0]
+            lines_text.append("\t" * self.tab_spaces[line_no] + line_str)
+
+        # 사용
+        
+        
+        code = CodeParagraph(
+            *lines_text,
             line_spacing=self.line_spacing,
-            tab_width=self.tab_width,
             font_size=self.font_size,
             font=self.font,
-            disable_ligatures=True,
-            stroke_width=self.stroke_width,
-            warn_missing_font=self.warn_missing_font,
+            # etc. 
+            consider_spaces_as_chars=False,
         )
+
+        # (색상 설정)
         for line_no in range(code.__len__()):
             line = code.chars[line_no]
             line_char_index = self.tab_spaces[line_no]
-            for word_index in range(self.code_json[line_no].__len__()):
+            for word_index in range(len(self.code_json[line_no])):
+                seg_len = len(self.code_json[line_no][word_index][0])
+                color = self.code_json[line_no][word_index][1]
                 line[
-                    line_char_index : line_char_index
-                    + self.code_json[line_no][word_index][0].__len__()
-                ].set_color(self.code_json[line_no][word_index][1])
-                line_char_index += self.code_json[line_no][word_index][0].__len__()
+                    line_char_index : line_char_index + seg_len
+                ].set_color(color)
+                line_char_index += seg_len
+
         return code
 
     def _gen_html_string(self):
