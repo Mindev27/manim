@@ -60,6 +60,16 @@ class CodeTransform(AnimationGroup):
 
         animations = []
 
+        if hasattr(before, 'background_mobject') and hasattr(after, 'background_mobject'):
+            animations.append(
+                Transform(before.background_mobject, after.background_mobject)
+            )
+
+        if hasattr(before, 'line_numbers') and hasattr(after, 'line_numbers'):
+            animations.append(
+                Transform(before.line_numbers, after.line_numbers)
+            )
+
         if delete_lines:
             animations.append(FadeOut(*delete_lines))
 
@@ -72,6 +82,8 @@ class CodeTransform(AnimationGroup):
         # 추가 애니메이션 추가
         if add_lines:
             animations.append(FadeIn(*add_lines))
+            
+        
 
         super().__init__(
             *animations,
@@ -86,14 +98,12 @@ class CodeTransform(AnimationGroup):
 def load_code(code=None):
     code_block = Code(
         code=code,
-        language="python",
         tab_width=4,
-        line_spacing=0.75,
-        background_stroke_width=0.1,
-        background_stroke_color=WHITE,
-        insert_line_no=False,
-        style="monokai",
-        background="rectangle",
+        background="window",
+        language="Python",
+        font="Monospace",
+        style="one-dark",
+        line_spacing=1
     ).scale(0.8)
 
     return code_block
@@ -110,9 +120,6 @@ class Animation(Scene):
         
         self.play(Create(square))
         self.wait()
-        
-        circle = Circle(radius=1.0, color=BLUE)
-        circle.shift(RIGHT * 2)
 '''
 
         after_code = '''from manim import *
@@ -122,11 +129,11 @@ class Animation(Scene):
     
         circle = Circle(radius=1.0, color=BLUE)
         circle.shift(RIGHT * 2)
+
+        square = Square(side_length=2.0, color=RED)
+        square.shift(LEFT * 2)
         
-        self.play(Transform(square, circle))
-        self.wait()
-        
-        self.play(Create(square))
+        self.play(Create(circle))
         self.wait()
 '''     
 
